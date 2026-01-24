@@ -1,0 +1,23 @@
+# ============================================================================
+# Python Dependencies for Point Cloud Visualization Platform - Backend
+# ============================================================================
+
+# Web Framework
+fastapi==0.109.0              # Modern, fast web framework for building APIs
+uvicorn[standard]==0.27.0     # ASGI server for running FastAPI
+
+# File Upload Support
+python-multipart==0.0.6       # Required for FastAPI file uploads
+
+# Point Cloud Processing
+laspy==2.5.3                  # Read and write LAS/LAZ files
+numpy==1.26.3                 # Numerical computing for point cloud data
+
+# Async File Operations
+aiofiles==23.2.1              # Async file I/O for better performance
+
+# HTTP Client (for health checks)
+requests==2.31.0              # HTTP library for health check endpoint
+
+# Additional Utilities
+python-dotenv==1.0.0          # Environment variable management

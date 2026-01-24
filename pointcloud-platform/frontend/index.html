@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Point Cloud Visualization Platform</title>
+
+    <!-- Potree CSS -->
+    <link rel="stylesheet" href="./build/potree/potree.css">
+    <link rel="stylesheet" href="./libs/jquery-ui/jquery-ui.min.css">
+    <link rel="stylesheet" href="./libs/openlayers3/ol.css">
+    <link rel="stylesheet" href="./libs/spectrum/spectrum.css">
+    <link rel="stylesheet" href="./libs/jstree/themes/mixed/style.css">
+
+    <style>
+        /* ================================================================ */
+        /* Global Styles */
+        /* ================================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        /* ================================================================ */
+        /* Layout */
+        /* ================================================================ */
+        #potree_container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            left: 0;
+            top: 0;
+        }
+
+        #potree_render_area {
+            width: 100%;
+            height: 100%;
+        }
+
+        #potree_sidebar_container {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            width: 350px;
+            max-height: calc(100vh - 20px);
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        /* ================================================================ */
+        /* Upload Panel */
+        /* ================================================================ */
+        #upload_panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 2000;
+            min-width: 400px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #upload_panel h1 {
+            margin-bottom: 10px;
+            font-size: 28px;
+            color: #4CAF50;
+        }
+
+        #upload_panel p {
+            margin-bottom: 30px;
+            color: #aaa;
+        }
+
+        #drop_zone {
+            border: 3px dashed #4CAF50;
+            border-radius: 8px;
+            padding: 60px 40px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(76, 175, 80, 0.05);
+        }
+
+        #drop_zone:hover {
+            border-color: #66BB6A;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        #drop_zone.dragover {
+            border-color: #81C784;
+            background: rgba(76, 175, 80, 0.2);
+            transform: scale(1.02);
+        }
+
+        #file_input {
+            display: none;
+        }
+
+        .upload_button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .upload_button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        #upload_status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        #upload_status.success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            color: #4CAF50;
+        }
+
+        #upload_status.error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+            color: #f44336;
+        }
+
+        #upload_status.processing {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196F3;
+            color: #2196F3;
+        }
+
+        /* ================================================================ */
+        /* Measurement Tools */
+        /* ================================================================ */
+        .tool_section {
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .tool_section h3 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+            font-size: 16px;
+        }
+
+        .tool_button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4CAF50;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .tool_button:hover {
+            background: rgba(76, 175, 80, 0.3);
+            transform: translateX(5px);
+        }
+
+        .tool_button.active {
+            background: #4CAF50;
+            font-weight: 600;
+        }
+
+        /* ================================================================ */
+        /* Project List */
+        /* ================================================================ */
+        #project_list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .project_item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .project_item:hover {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #4CAF50;
+        }
+
+        .project_item.active {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+        }
+
+        /* ================================================================ */
+        /* Loading Spinner */
+        /* ================================================================ */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #4CAF50;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ================================================================ */
+        /* Scrollbar Styling */
+        /* ================================================================ */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(76, 175, 80, 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(76, 175, 80, 0.7);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ================================================================ -->
+    <!-- Upload Panel (shown initially) -->
+    <!-- ================================================================ -->
+    <div id="upload_panel">
+        <h1>🌍 Point Cloud Visualization Platform</h1>
+        <p>Upload LAS or LAZ point cloud files for visualization</p>
+
+        <div id="drop_zone">
+            <h2 style="color: #4CAF50; margin-bottom: 10px;">📁 Drop File Here</h2>
+            <p style="color: #aaa;">or click to browse</p>
+            <p style="color: #888; font-size: 12px; margin-top: 10px;">Supported formats: .las, .laz</p>
+        </div>
+
+        <input type="file" id="file_input" accept=".las,.laz">
+
+        <button class="upload_button" onclick="document.getElementById('file_input').click()">
+            Browse Files
+        </button>
+
+        <div id="upload_status"></div>
+
+        <div id="project_list" style="margin-top: 30px; display: none;">
+            <h3 style="color: #4CAF50; margin-bottom: 10px;">Recent Projects</h3>
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Potree Viewer Container (hidden initially) -->
+    <!-- ================================================================ -->
+    <div id="potree_container" style="display: none;">
+        <div id="potree_render_area"></div>
+
+        <!-- Sidebar with measurement tools -->
+        <div id="potree_sidebar_container">
+            <h2 style="margin-bottom: 20px; color: #4CAF50;">🛠️ Tools</h2>
+
+            <!-- Measurement Tools -->
+            <div class="tool_section">
+                <h3>📏 Measurement Tools</h3>
+                <button class="tool_button" onclick="activateMeasureTool('distance')">
+                    Distance Measurement
+                </button>
+                <button class="tool_button" onclick="activateMeasureTool('area')">
+                    Area Measurement
+                </button>
+                <button class="tool_button" onclick="activateMeasureTool('volume')">
+                    Volume Measurement
+                </button>
+                <button class="tool_button" onclick="activateMeasureTool('angle')">
+                    Angle Measurement
+                </button>
+                <button class="tool_button" onclick="activateMeasureTool('height')">
+                    Height Measurement
+                </button>
+            </div>
+
+            <!-- View Controls -->
+            <div class="tool_section">
+                <h3>👁️ View Controls</h3>
+                <button class="tool_button" onclick="resetView()">
+                    Reset Camera
+                </button>
+                <button class="tool_button" onclick="toggleSidebar()">
+                    Toggle Sidebar
+                </button>
+            </div>
+
+            <!-- Upload New -->
+            <div class="tool_section">
+                <h3>📤 Upload</h3>
+                <button class="tool_button" onclick="showUploadPanel()">
+                    Upload New Point Cloud
+                </button>
+            </div>
+
+            <!-- Appearance Controls -->
+            <div class="tool_section">
+                <h3>🎨 Appearance</h3>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px; font-size:14px; color:#aaa;">Point Budget
+                        (Millions)</label>
+                    <input type="range" min="0.1" max="10" step="0.1" value="2" id="sldPointBudget" style="width:100%"
+                        oninput="updatePointBudget(this.value)">
+                    <span id="lblPointBudget" style="float:right; color:#4CAF50;">2.0M</span>
+                    <div style="clear:both;"></div>
+                </div>
+
+                <div style="margin-bottom: 5px;">
+                    <label style="display:block; margin-bottom:5px; font-size:14px; color:#aaa;">Point Size</label>
+                    <input type="range" min="0" max="3" step="0.01" value="1" id="sldPointSize" style="width:100%"
+                        oninput="updatePointSize(this.value)">
+                    <span id="lblPointSize" style="float:right; color:#4CAF50;">1.0</span>
+                    <div style="clear:both;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- Potree JavaScript Libraries -->
+    <!-- ================================================================ -->
+    <script src="./libs/jquery/jquery-3.1.1.min.js"></script>
+    <script src="./libs/spectrum/spectrum.js"></script>
+    <script src="./libs/jquery-ui/jquery-ui.min.js"></script>
+    <script src="./libs/three.js/build/three.min.js"></script>
+    <script src="./libs/other/BinaryHeap.js"></script>
+    <script src="./libs/tween/tween.min.js"></script>
+    <script src="./libs/d3/d3.js"></script>
+    <script src="./libs/proj4/proj4.js"></script>
+    <script src="./libs/openlayers3/ol.js"></script>
+    <script src="./libs/i18next/i18next.js"></script>
+    <script src="./libs/jstree/jstree.js"></script>
+
+    <!-- FIX: Disable AMD/CommonJS detection to force Potree to export to global window object -->
+    <script>
+        window.temp_define = window.define;
+        window.temp_module = window.module;
+        window.define = undefined;
+        window.module = undefined;
+    </script>
+    <script src="./build/potree/potree.js"></script>
+    <script>
+        // Restore environment (optional, but good practice)
+        if (window.temp_define) window.define = window.temp_define;
+        if (window.temp_module) window.module = window.temp_module;
+    </script>
+
+    <!-- ================================================================ -->
+    <!-- Application JavaScript -->
+    <!-- ================================================================ -->
+    <script>
+        // ================================================================
+        // Global Variables
+        // ================================================================
+        let viewer = null;
+        let currentProjectId = null;
+        const API_BASE = window.location.origin;
+
+        // ================================================================
+        // Initialize on Page Load
+        // ================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            setupUploadHandlers();
+            loadProjects();
+        });
+
+        // ================================================================
+        // Upload Handlers
+        // ================================================================
+        function setupUploadHandlers() {
+            const dropZone = document.getElementById('drop_zone');
+            const fileInput = document.getElementById('file_input');
+
+            // Click to upload
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // File selected
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    uploadFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+
+                if (e.dataTransfer.files.length > 0) {
+                    uploadFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // ================================================================
+        // Upload File to Backend
+        // ================================================================
+        async function uploadFile(file) {
+            const statusDiv = document.getElementById('upload_status');
+
+            // Validate file extension
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.las') && !fileName.endsWith('.laz')) {
+                showStatus('error', '❌ Invalid file format. Please upload .las or .laz files.');
+                return;
+            }
+
+            // Show processing status
+            showStatus('processing', `⚙️ Processing ${file.name}...<div class="spinner"></div>`);
+            // Upload file with robust error handling
+            // The original uploadFile function is replaced here.
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show progress UI
+            const progressDiv = document.getElementById('upload_status'); // Reusing upload_status for progress
+            const errorMessageDiv = document.getElementById('upload_status'); // Reusing upload_status for error messages
+            const uploadStatus = document.getElementById('upload_status'); // Reusing upload_status for status text
+            const uploadZone = document.getElementById('drop_zone'); // Assuming drop_zone is the upload area
+
+            uploadZone.style.display = 'none';
+            progressDiv.className = 'processing'; // Set class for processing
+            progressDiv.style.display = 'block';
+            errorMessageDiv.style.display = 'none'; // Hide error initially
+            uploadStatus.innerHTML = 'Uploading and processing point cloud... (Large files may take 10-20 minutes)<div class="spinner"></div>';
+
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                // Check headers to see if response is JSON
+                const contentType = response.headers.get("content-type");
+                let data;
+
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    data = await response.json();
+                } else {
+                    // If not JSON (e.g. 502/504 HTML), read as text
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    throw new Error(`Server returned non-JSON response (${response.status}). See console for details.`);
+                }
+
+                if (!response.ok) {
+                    // Extract detailed error message
+                    let msg = data.detail || data.message || "Unknown error";
+                    if (data.stderr) msg += `\n\nStderr: ${data.stderr}`;
+                    if (data.logs) console.log("Backend Logs:", data.logs);
+                    throw new Error(msg);
+                }
+
+                // Success!
+                console.log('Upload success:', data);
+                uploadStatus.className = 'success';
+                uploadStatus.innerHTML = 'Processing complete! Loading viewer...';
+
+                // Load the point cloud
+                loadPointCloud(data.project_id); // Assuming data.project_id is the correct ID
+
+                // Refresh project list
+                loadProjects();
+
+            } catch (error) {
+                console.error('Upload Error:', error);
+                progressDiv.style.display = 'none';
+                uploadZone.style.display = 'block';
+                errorMessageDiv.className = 'error'; // Set class for error
+                errorMessageDiv.style.display = 'block';
+
+                // Format error for display
+                errorMessageDiv.innerHTML = `
+                    <strong>Upload Failed:</strong><br>
+                    <pre style="white-space: pre-wrap; margin-top: 10px; font-size: 0.9em;">${error.message}</pre>
+                    <br>
+                    <em>Check console (F12) for full logs.</em>
+                `;
+            }
+        }
+        // ================================================================
+        // Show Upload Status
+        // ================================================================
+        function showStatus(type, message) {
+            const statusDiv = document.getElementById('upload_status');
+            statusDiv.className = type;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // ================================================================
+        // Load Projects List
+        // ================================================================
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_BASE}/api/projects`);
+                const result = await response.json();
+
+                if (result.status === 'success' && result.projects.length > 0) {
+                    const projectList = document.getElementById('project_list');
+                    projectList.style.display = 'block';
+                    projectList.innerHTML = '<h3 style="color: #4CAF50; margin-bottom: 10px;">Recent Projects</h3>';
+
+                    result.projects.forEach(project => {
+                        const item = document.createElement('div');
+                        item.className = 'project_item';
+                        item.textContent = `Project: ${project.project_id.substring(0, 8)}...`;
+                        item.onclick = () => loadPointCloud(project.project_id);
+                        projectList.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+
+        // ================================================================
+        // Load Point Cloud in Viewer
+        // ================================================================
+        function loadPointCloud(projectId) {
+            console.log(`📦 Loading point cloud for project: ${projectId}`);
+            currentProjectId = projectId;
+
+            // Hide upload panel
+            document.getElementById('upload_panel').style.display = 'none';
+
+            // Show Potree container
+            document.getElementById('potree_container').style.display = 'block';
+
+            // Initialize Potree viewer if not already initialized
+            if (!viewer) {
+                console.log('🔧 Viewer not initialized, initializing now...');
+                const success = initPotreeViewer();
+                if (!success) {
+                    console.error('❌ Failed to initialize viewer, cannot load point cloud');
+                    showStatus('error', '❌ Failed to initialize 3D viewer. Please refresh the page.');
+                    return;
+                }
+            }
+
+            // Verify viewer is ready
+            if (!viewer) {
+                console.error('❌ Viewer is still null after initialization!');
+                showStatus('error', '❌ Viewer initialization failed. Please refresh the page.');
+                return;
+            }
+
+            console.log('✓ Viewer ready, loading point cloud...');
+
+            // Load the point cloud from correct Potree output structure
+            const cloudUrl = `${API_BASE}/processed/${projectId}/pointclouds/cloud/metadata.json`;
+            console.log(`📍 Loading from: ${cloudUrl}`);
+
+            try {
+                Potree.loadPointCloud(cloudUrl, "cloud", (e) => {
+                    console.log('✓ Point cloud load callback triggered');
+
+                    if (e.type === 'loading_failed') {
+                        console.error('❌ Point cloud loading failed:', e);
+                        showStatus('error', `❌ Failed to load point cloud: ${e.message || 'Unknown error'}`);
+                        return;
+                    }
+
+                    const pointcloud = e.pointcloud;
+                    const material = pointcloud.material;
+
+                    // Configure point cloud appearance
+                    material.size = 1;
+                    material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+                    material.shape = Potree.PointShape.CIRCLE;
+
+                    // Add to scene
+                    viewer.scene.addPointCloud(pointcloud);
+
+                    // Fit camera to point cloud
+                    viewer.fitToScreen();
+
+                    console.log('✅ Point cloud loaded and displayed successfully!');
+                    console.log(`   Points: ${pointcloud.pcoGeometry.pointAttributes.size}`);
+                });
+            } catch (error) {
+                console.error('❌ Error loading point cloud:', error);
+                console.error('Error stack:', error.stack);
+                showStatus('error', `❌ Failed to load point cloud: ${error.message}`);
+            }
+        }
+
+        // ================================================================
+        // Initialize Potree Viewer
+        // ================================================================
+        function initPotreeViewer() {
+            console.log('🔍 Initializing Potree viewer...');
+
+            // Verify Potree library is loaded
+            if (typeof Potree === 'undefined') {
+                console.error('❌ Potree library not loaded!');
+                showStatus('error', '❌ Potree library failed to load. Please refresh the page.');
+                return false;
+            }
+
+            console.log('✓ Potree object exists:', Potree);
+
+            // Verify Potree.Viewer constructor exists
+            if (typeof Potree.Viewer !== 'function') {
+                console.error('❌ Potree.Viewer is not a constructor!');
+                console.log('Available Potree properties:', Object.keys(Potree));
+                showStatus('error', '❌ Potree.Viewer not available. Library version mismatch.');
+                return false;
+            }
+
+            console.log('✓ Potree.Viewer constructor found');
+
+            try {
+                // Get the render area element
+                const renderArea = document.getElementById('potree_render_area');
+                if (!renderArea) {
+                    console.error('❌ potree_render_area element not found!');
+                    return false;
+                }
+
+                console.log('✓ Render area found:', renderArea);
+
+                // Initialize viewer
+                viewer = new Potree.Viewer(renderArea);
+
+                console.log('✓ Viewer instance created:', viewer);
+
+                // Configure viewer
+                viewer.setEDLEnabled(true);
+                viewer.setFOV(60);
+                viewer.setPointBudget(2_000_000); // 2 Million default
+                viewer.setBackground('gradient');
+
+                // Set up controls
+                viewer.loadSettingsFromURL();
+
+                // Add measurement tools to scene
+                viewer.scene.view.position.set(0, 0, 10);
+
+                console.log('✅ Potree viewer initialized successfully!');
+                return true;
+
+            } catch (error) {
+                console.error('❌ Error initializing Potree viewer:', error);
+                console.error('Error stack:', error.stack);
+                showStatus('error', `❌ Viewer initialization failed: ${error.message}`);
+                return false;
+            }
+        }
+
+        // ================================================================
+        // Appearance Controls
+        // ================================================================
+        function updatePointBudget(val) {
+            if (!viewer) return;
+            const budget = parseFloat(val) * 1_000_000;
+            viewer.setPointBudget(budget);
+            document.getElementById('lblPointBudget').textContent = val + "M";
+        }
+
+        function updatePointSize(val) {
+            if (!viewer) return;
+            const size = parseFloat(val);
+            document.getElementById('lblPointSize').textContent = size;
+
+            // Update all point clouds in scene
+            viewer.scene.pointclouds.forEach(pc => {
+                pc.material.size = size;
+            });
+        }
+
+        // ================================================================
+        // Activate Measurement Tool
+        // ================================================================
+        function activateMeasureTool(toolType) {
+            if (!viewer) return;
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tool_button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+
+            // Activate the appropriate measurement tool
+            switch (toolType) {
+                case 'distance':
+                    viewer.measuringTool.startInsertion({
+                        showDistances: true,
+                        showAngles: false,
+                        showArea: false,
+                        closed: false,
+                        maxMarkers: 2,
+                        name: 'Distance'
+                    });
+                    break;
+
+                case 'area':
+                    viewer.measuringTool.startInsertion({
+                        showDistances: true,
+                        showArea: true,
+                        closed: true,
+                        maxMarkers: Infinity,
+                        name: 'Area'
+                    });
+                    break;
+
+                case 'volume':
+                    viewer.volumeTool.startInsertion();
+                    break;
+
+                case 'angle':
+                    viewer.measuringTool.startInsertion({
+                        showDistances: false,
+                        showAngles: true,
+                        showArea: false,
+                        closed: false,
+                        maxMarkers: 3,
+                        name: 'Angle'
+                    });
+                    break;
+
+                case 'height':
+                    viewer.measuringTool.startInsertion({
+                        showDistances: true,
+                        showHeight: true,
+                        maxMarkers: 2,
+                        name: 'Height'
+                    });
+                    break;
+            }
+
+            console.log(`✓ Activated ${toolType} measurement tool`);
+        }
+
+        // ================================================================
+        // Reset Camera View
+        // ================================================================
+        function resetView() {
+            if (viewer) {
+                viewer.fitToScreen();
+            }
+        }
+
+        // ================================================================
+        // Toggle Sidebar
+        // ================================================================
+        function toggleSidebar() {
+            const sidebar = document.getElementById('potree_sidebar_container');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // ================================================================
+        // Show Upload Panel
+        // ================================================================
+        function showUploadPanel() {
+            document.getElementById('potree_container').style.display = 'none';
+            document.getElementById('upload_panel').style.display = 'block';
+            document.getElementById('upload_status').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>
