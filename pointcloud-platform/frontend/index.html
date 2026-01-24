@@ -489,7 +489,7 @@
             uploadStatus.innerHTML = 'Uploading and processing point cloud... (Large files may take 10-20 minutes)<div class="spinner"></div>';
 
             try {
-                const response = await fetch('${API_BASE}/api/upload', {
+                const response = await fetch(`${API_BASE}/api/upload`, {
                     method: 'POST',
                     body: formData
                 });
