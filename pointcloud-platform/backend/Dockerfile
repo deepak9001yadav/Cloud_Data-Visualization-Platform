@@ -86,7 +86,7 @@ RUN mkdir -p /app/uploads /app/processed
 # ============================================================================
 # STEP 6: Expose Port and Set Environment Variables
 # ============================================================================
-EXPOSE 8000
+EXPOSE 10000
 
 # Set Python to run in unbuffered mode (logs appear immediately)
 ENV PYTHONUNBUFFERED=1
@@ -95,13 +95,13 @@ ENV PYTHONUNBUFFERED=1
 # STEP 7: Health Check
 # ============================================================================
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
 # ============================================================================
 # STEP 8: Run the Application
 # ============================================================================
 # Use uvicorn to run FastAPI with:
 # - Host 0.0.0.0 (accessible from outside container)
-# - Port 8000
+# - Port 10000
 # - Auto-reload disabled in production
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
