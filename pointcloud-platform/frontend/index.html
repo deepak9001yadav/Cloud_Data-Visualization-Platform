@@ -407,7 +407,7 @@
         // ================================================================
         let viewer = null;
         let currentProjectId = null;
-        const API_BASE = window.location.origin;
+        const API_BASE = "https://cloud-data-visualization-platform.onrender.com";
 
         // ================================================================
         // Initialize on Page Load
@@ -489,7 +489,7 @@
             uploadStatus.innerHTML = 'Uploading and processing point cloud... (Large files may take 10-20 minutes)<div class="spinner"></div>';
 
             try {
-                const response = await fetch('/api/upload', {
+                const response = await fetch('${API_BASE}/api/upload', {
                     method: 'POST',
                     body: formData
                 });
