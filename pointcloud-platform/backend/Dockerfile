@@ -54,7 +54,7 @@ RUN cd /opt && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
-    make -j$(nproc) && \
+    make && \
     # Copy binary to root of repo so it sits next to 'resources' folder
     cp PotreeConverter .. && \
     # Cleanup build dir to save space, but keep the repo structure
