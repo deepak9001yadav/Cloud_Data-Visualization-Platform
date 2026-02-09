@@ -409,6 +409,37 @@
         let currentProjectId = null;
         const API_BASE = "https://cloud-data-visualization-platform.onrender.com";
 
+
+        // ================================================================
+        // 🚀 WAKE-UP CALL 
+        // ================================================================
+        function wakeUpBackend() {
+            console.log("🚀 Sending wake-up call to backend...");
+
+            // Backend ko health check bhej kar jagana
+            fetch(`${API_BASE}/health`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log("✅ Backend is awake and healthy!");
+                    }
+                })
+                .catch(err => {
+                    // Agar server so raha hai toh ye message console mein dikhega
+                    console.warn("⚠️ Backend is still sleeping. Waking it up now...");
+                });
+        }
+
+        // ================================================================
+        // Initialize on Page Load
+        // ================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            // 1. Page load hote hi backend ko ping karo
+            wakeUpBackend();
+
+            // 2. Baki handlers initialize karo
+            setupUploadHandlers();
+            loadProjects();
+        });
         // ================================================================
         // Initialize on Page Load
         // ================================================================
